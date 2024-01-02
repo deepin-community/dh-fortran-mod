@@ -24,10 +24,10 @@ B<dh_fortran_mod>   [B<--sourcedir=>I<dir>] [$<I<debhelper options>>]
 
 B<dh_fortran_mod> is a debhelper program that finds Fortran module and submodule files and
 adds dependencies to B<gfortran-$version> as required to the package using
-via the variable B<${misc:Depends}>.
+via the variable B<${fortran:Depends}>.
 
 B<dh_fortran_mod> is expected to be automatically added using the debhelper "addon" B<fortran_mod>
-ie. using the debian/rules line:
+ie. either automatically, by build-depending on 'dh-sequence-fortran-mod', or explicitly:
 
     dh $@ --with fortran_mod
 
@@ -49,6 +49,8 @@ Typically Fortran module files are included in library development packages.
 
 =head1 TODO
 
+Add dh-fortran-mod support for generic fortran compilers (ifx, etc).
+
 =over 4
 
 B<dh_fortran_mod> will be expanded to find mod files automatically from the I<debian/tmp> directory.
@@ -60,19 +62,25 @@ The default directory will be $fmoddir ( /usr/lib/$multiarch/fortran/$compiler_m
 If the target directory is absolute (starts with a  '/'), this directory is used in the target package.
 If the target  does not absolute, it will be treated as a subdirectory of $fmoddir.
 
+Currently four flavours of Fortran compiler are supported: gfortran-*  ('gfortran'),
+flang-new-* ('flang') , flang-to-external-fc-* ('flangext') and lfortran ('lfortran').
+
 $compiler_mod_directory is based on the compiler module version: currently gfortran-mod-15 for
-gfortran-11, and flang-mod-34 for flang-7. These will be updated for incompatible compiler versions.
-There is a symlink in $libdir/fortran/ for the 'canonical' compiler name, linking to this, e.g.
-  /usr/lib/$multiarch/fortran/x86_64-linux-gnu-gfortran-9 -> gfortran-mod-15
-This enables makefile fragments to construct $fmoddir as required from :
+gfortran-13 (and older), flang-mod-15 for flang-new-15+ and lfortran-mod-0 for lfortran.
 
-  FC:=$(shell basename $(shell readlink -f /usr/bin/gfortran))
-  FMODDIR:=/usr/lib/$(shell dpkg-architecture -qDEB_HOST_MULTIARCH)/fortran/$(FC)
+For flang-to-external-fc-* the version is flangext-mod-15 (assuming gfortran-13 as the external compiler);
+in principle flang-to-external-fc ('flangext' flavour) and gfortran are intercompatible but 
+intermixing is avoided.
 
-Its not clear what happens on module version changes in Flang/F18. While the version number signifies
-format changes, it appears the design is currently to be backward compatible and read previous versions.
-Hence symlinks for flang handling may be required; however a new f18 front-end is being developed,
-so this may change.
+These will be updated for incompatible compiler versions.
+
+Support for Makefiles and debian/rules is given in /usr/share/debhelper/dh-fortran/fortran-support.mk
+
+This enables, for example:
+
+	/usr/share/debhelper/dh-fortran/fortran-support.mk
+	FMODDIR:= $(call get_fmoddir, gfortran)
+	FC_EXE:= $(call get_fc_exe, $(FC_DEFAULT))
 
 =cut
 
@@ -116,6 +124,7 @@ sub determine_mod_version {
     my $modfile = shift;
     my $magic = File::LibMagic->new();
 
+    print("Examining $modfile ...\n");
     if ( ! (-r $modfile) ) {
 	warning("Can't open $modfile");
 	return ('none', -1);
@@ -133,18 +142,36 @@ sub determine_mod_version {
         my $z = new IO::Uncompress::Gunzip $modfile or error("gunzip failed: $GunzipError\n");
         $_ = <$z>;
         $z->close();
+    } elsif ($mime eq "application/octet-stream") {
+        # A bit dodgy but should allow us to get the first line of an lfortran mod file
+        if ( ! (open(MODFILE, "<", $modfile))) {
+	    warning($!);
+	    return ('none', -1);
+	}
+        $_ = <MODFILE>;
+	close(MODFILE);
     } else {
         print("wrong MIME type $mime for $modfile; ignoring");
 	return ('none', -1);
     }
 
     if (/^GFORTRAN module version '([0-9]+)'/) {
-        return ('gfortran', $1);
+        my $ver = $1;
+        if (/created from flang/) {
+           return ('flangext', $ver);
+        } else {
+           return ('gfortran', $ver);
+        }
+    } elsif (/LCompilers Modfile/) {
+       return ('lfortran', 0);
+    } elsif (/!mod\$ v1 /) {
+        # flang-new 15+ on Debian/Ubuntu
+        return ('flang', 15);
     } elsif  (/^V([0-9]+)/) {
-	# could also be PGI, but we don't ship PGI on Debian ...
+        # could also be PGI, but we don't ship PGI on Debian ... its an old flang
 	return ('flang', $1);
     } else {
-        # error("$modfile is not a gfortran mod file.");
+        # error("$modfile is not a recognized fortran mod file.");
 	return ('none', -1);
     }
 
@@ -165,20 +192,40 @@ sub which_compiler {
 		$modversions{'gfortran-7'} = "${compiler}-mod-${modversion}";
 	    }
 	    if ($modversion eq 15) {
-		$compiler_version = 'gfortran-11';
+		$compiler_version = 'gfortran-13';
 		$modversions{'gfortran-8'} = "${compiler}-mod-${modversion}";
 		$modversions{'gfortran-9'} = "${compiler}-mod-${modversion}";
 		$modversions{'gfortran-10'} = "${compiler}-mod-${modversion}";
 		$modversions{'gfortran-11'} = "${compiler}-mod-${modversion}";
+		$modversions{'gfortran-12'} = "${compiler}-mod-${modversion}";
+		$modversions{'gfortran-13'} = "${compiler}-mod-${modversion}";
 
 	    }
 	}
 	if ($compiler eq 'flang') {
+            if ($modversion eq 15) {
+                $compiler_version = 'flang-new-7';
+		$modversions{'flang-new-15'} = "${compiler}-mod-${modversion}";
+		$modversions{'flang-new-16'} = "${compiler}-mod-${modversion}";
+		$modversions{'flang-new-17'} = "${compiler}-mod-${modversion}";
+            }
 	    if ($modversion le 34) {
 		$compiler_version = 'flang-7';
 		$modversions{'flang-7'} = "${compiler}-mod-${modversion}";
 	    }
 	}
+        if ($compiler eq 'flangext') {
+           if ($modversion eq 15)  {
+              $compiler_version = 'flang-to-external-fc-17';
+	      $modversions{'flang-to-external-fc-15'} = "${compiler}-mod-${modversion}";
+	      $modversions{'flang-to-external-fc-16'} = "${compiler}-mod-${modversion}";
+	      $modversions{'flang-to-external-fc-17'} = "${compiler}-mod-${modversion}";
+           }
+       }
+       if ($compiler eq 'lfortran') {
+         $compiler_version = 'lfortran-0';
+         $modversions{'lfortran-0'} = "${compiler}-mod-${modversion}";
+       }
     }
     verbose_print ("Fortran modfile $modfile created by $compiler modversion $modversion");
     return $compiler_version;
@@ -385,13 +432,12 @@ foreach my $package (getpackages()) {
 	log_installed_files($package, @installed);
     }
     $pkg_built_using = create_built_using ( %compiler_pkgs);
-    addsubstvar($package, "misc:Depends", $pkg_built_using);
+    addsubstvar($package, "fortran:Depends", $pkg_built_using);
     keys %modversions;
 
     if ($config) { # config file defined, so create scripts
 	foreach my $compiler (sort keys %modversions) {
-	    my $lnk=`readlink -f /usr/bin/$compiler`;
-	    my $canoncomp=`basename $lnk`;
+	    my $canoncomp="$multiarch-$compiler";
 	    chomp $canoncomp;
 	    autoscript($package, 'preinst', 'preinst-fortran-mod', { 'MULTIARCH' => $multiarch,
 									 'FCOMPILERMOD' => $modversions{$compiler},
