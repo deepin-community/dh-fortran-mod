@@ -3,6 +3,9 @@ multiarch="#MULTIARCH#"
 base="#FCOMPILERMOD#"
 canoncomp='#FCANONICAL#'
 
+# clean up old cruft first. Delete symlinks, silent because we don't delete directories
+( rm -f /usr/lib/$multiarch/fortran/gfortran-* 2> /dev/null ) || true
+
 mkdir -p /usr/lib/$multiarch/fortran/$base
 if ! test -x /usr/lib/$multiarch/fortran/$canoncomp ; then
   ln -sf /usr/lib/$multiarch/fortran/$base /usr/lib/$multiarch/fortran/$canoncomp

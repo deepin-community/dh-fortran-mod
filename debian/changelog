@@ -1,3 +1,86 @@
+dh-fortran-mod (0.32) unstable; urgency=medium
+
+  * Remove troublesome quotes around function returns
+  * Add lfortran support
+  * Define FC_OPTIONAL in fortran-support.mk
+  * Return sane defaults for external FC in fortran-support.mk
+  * Add TODO.md, test Makefile
+  * Change misc:Depends to fortran:Depends in dh-fortran-mod
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Mon, 01 Jan 2024 12:36:47 +0000
+
+dh-fortran-mod (0.31) unstable; urgency=medium
+
+  * Provide dh-sequence-fortran as we do more than mod files now
+  * Depend on gfortran | fortran-compiler to simplify build-deps
+  * Add detection code  for flang-external-fc-, flang-new-*
+  * Update documentation in dh_fortran_mod
+  * fortran-support.mk: (experimental)
+     - add get_fmoddir, get_flibdir, get_fc_exe functions
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Sat, 30 Dec 2023 13:03:26 +0000
+
+dh-fortran-mod (0.30) unstable; urgency=medium
+
+  * Update more references to /usr/include
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Thu, 07 Dec 2023 08:46:46 +0000
+
+dh-fortran-mod (0.29) unstable; urgency=medium
+
+  * Add fortran-support.mk helper script for d/rules. Experimental
+  * Set fmoddir to /usr/include, not /usr/lib
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Mon, 04 Dec 2023 16:57:34 +0000
+
+dh-fortran-mod (0.28) unstable; urgency=medium
+
+  * Standards-Version: 4.6.2
+  * Add support for gfortran-12
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Fri, 16 Jun 2023 14:33:57 +0100
+
+dh-fortran-mod (0.27) unstable; urgency=medium
+
+  * Silently ignore failure to delete non-existent directories in postrm
+    Closes: #1019050
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Mon, 12 Sep 2022 14:27:19 +0100
+
+dh-fortran-mod (0.26) unstable; urgency=medium
+
+  * Ignore errors on rm cruft files in preinst
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Mon, 29 Aug 2022 20:58:31 +0100
+
+dh-fortran-mod (0.25) unstable; urgency=medium
+
+  * Don't create links 'gfortran-*' without arch base when compiler
+    not installed. Clean up cruft from doing so before
+  * Close old fixed bug. Closes: #1013316
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Mon, 29 Aug 2022 17:43:35 +0100
+
+dh-fortran-mod (0.24) unstable; urgency=medium
+
+  * Drop gcc-transition workk for now as it blocks the tbb transition
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Tue, 21 Jun 2022 16:20:17 +0100
+
+dh-fortran-mod (0.23) unstable; urgency=medium
+
+  * Standards-Version: 4.6.1
+  * Forrce Build-depend on gfortran-12 for gcc-12 transition.
+    Then rebuild deps with this version.	
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Sun, 19 Jun 2022 10:07:17 +0100
+
+dh-fortran-mod (0.22) unstable; urgency=medium
+
+  * Add support for gfortran-12
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Fri, 22 Apr 2022 18:40:50 +0100
+
 dh-fortran-mod (0.21) unstable; urgency=medium
 
   * Standards-Version: 4.6.0

@@ -13,5 +13,5 @@ if test -d /usr/lib/$multiarch/fortran/$base ; then
   ( cd /usr/lib/$multiarch && rmdir --ignore-fail-on-non-empty --parents fortran/$base )
 fi
 
-# Delete broken old symlinks
-#find /usr/lib/$multiarch -xtype l -delete
+# Delete cruft  directory when empty
+( rmdir --ignore-fail-on-non-empty /usr/lib/$multiarch/fortran/gfortran 2> /dev/null || true )
